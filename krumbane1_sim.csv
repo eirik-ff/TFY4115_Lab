@@ -1,4 +1,4 @@
-time,angle,x,y,speed_tangential,accel_tangential,normal_force,curvature,dfdx,d2fdx2
+# time,angle,x,y,speed_tangential,accel_tangential,normal_force,curvature,dfdx,d2fdx2
 0.0000,1.0550,0.0000,0.6533,0.0000,0.0000,0.0000,0.0000,-1.7637,17.1086
 1.0000,1.0550,0.0000,0.6533,0.0000,6.0955,1.0000,2.0529,-1.7637,17.1086
 2.0000,1.0550,0.0000,0.6533,0.0061,6.0955,1.0000,2.0529,-1.7637,17.1086

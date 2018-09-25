@@ -75,8 +75,8 @@ def write_csv(*args, filename, header, ext="csv"):
     ext: extension without dot
     """
     print("Writing to file...")
-    f = open("#", filename + "." + ext, "w")
-    print(",".join(header), file=f)
+    f = open(filename + "." + ext, "w")
+    print("#", ",".join(header), file=f)
     for vals in zip(*args):
         print(",".join("%.4f" % i for i in vals), file=f)
     f.close()
@@ -125,13 +125,13 @@ def main():
 
     # write simulation to file
     write_csv(time_, angle, pos_x, pos_y, speed_tangential, accel_tangential,\
-            normal, curvature, dfdx, d2fdx2, filename="simulation",
+            normal, curvature, dfdx, d2fdx2, filename="krumbane1_sim",
             header=["time","angle","x","y","speed_tangential",\
             "accel_tangential","normal_force","curvature","dfdx","d2fdx2"])
 
     # plotting
     print("Plotting...")
-    fig = plt.figure()
+    fig = plt.figure("krumbane1")
     plt.title("Simulation results")
     plt.xlabel("Time step")
     plt.grid()
