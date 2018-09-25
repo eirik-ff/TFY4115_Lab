@@ -27,13 +27,13 @@ def iptrack(filename):
 
 
 def main():
-    data = "krumbane.txt"
+    data = "krumbane1.txt"
     coeffs = iptrack(data)
 
     # generates the polynomial expression
     poly = ""
     for n, c in enumerate(coeffs):
-        poly += "+ {} x^{}".format(c, 15 - n)
+        poly += "+ {} x^{} ".format(c, 15 - n)
 
     # prints the polynomial excluding the first + sign
     print(poly[1:])
