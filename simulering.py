@@ -1,3 +1,4 @@
+import os
 import math
 import numpy as np
 from matplotlib import pyplot as plt
@@ -72,24 +73,37 @@ def write_csv(*args, filename, header, ext="csv"):
             correspond with *args
     ext: extension without dot
     """
-    print("Writing to file...")
-    f = open(filename + "." + ext, "w")
+    filepath = filename + "." + ext
+
+    if filepath in os.listdir(os.getcwd()):
+        ans = input("Overwrite old data? (Y/n) ").lower()
+        if ans == "n":
+            count = 0
+            for f in os.listdir(os.getcwd()):
+                if filename in f:
+                    count += 1
+
+            filepath = filename + "_" + str(count) + "." + ext
+
+    print("Writing to file", filepath)
+    f = open(filepath, "w")
     print("#", ",".join(header), file=f)
     for vals in zip(*args):
         print(",".join("%.4f" % i for i in vals), file=f)
     f.close()
-    print("Wrote to", filename + "." + ext)
+    print("Wrote to", filepath)
 
 
 def main():
     print("Enter file with data from Tracker")
     root = tk.Tk()
     root.withdraw()
-    filename = filedialog.askopenfilename()
+    filepath = filedialog.askopenfilename()
+    filename = os.path.basename(filepath).split(".")[0]
     root.destroy()  # removes window instance
 
-    coeffs = iptrack(filename)
-    func = lambda x: bane(x, coeffs)
+    coeffs = iptrack(filepath)
+    track = lambda x: bane(x, coeffs)  # banen
 
     step_h = 0.001  # s, eulers method step
     UPPER_T = 1.1  # s, how long to simulate
@@ -106,42 +120,42 @@ def main():
     dfdx = [0.0] * len(time_)  # first derivative
     d2fdx2 = [0.0] * len(time_)  # second derivative
 
-    angle[0] = alpha(func, pos_x[0])
-    pos_y[0] = func(pos_x[0])
+    angle[0] = alpha(track, pos_x[0])
+    pos_y[0] = track(pos_x[0])
 
     # calc points for curve
     t = [i * step_h for i in range(0, int(UPPER_T / step_h))]
     b = list()
     for x in t:
-        b.append(func(x))
+        b.append(track(x))
 
     # simulation loop
     for n in time_[:-1]:  # n from 0 to len-1
-        angle[n+1] = alpha(func, pos_x[n])
+        angle[n+1] = alpha(track, pos_x[n])
         accel_tangential[n+1] = accel_at_x(angle[n])
         speed_tangential[n+1] = speed_tangential[n] + step_h * accel_tangential[n]
         pos_x[n+1] = pos_x[n] + step_h * x_comp(speed_tangential[n], angle[n])
         pos_y[n+1] = pos_y[n] - step_h * y_comp(speed_tangential[n], angle[n])
 
-        curvature[n+1] = krumning(func, pos_x[n])
-        normal[n+1] = normal_g_force(speed_tangential[n], krumning(func, pos_x[n]))
+        curvature[n+1] = krumning(track, pos_x[n])
+        normal[n+1] = normal_g_force(speed_tangential[n], krumning(track, pos_x[n]))
 
-        dfdx[n] = first_derivative(func, pos_x[n])
-        d2fdx2[n] = second_derivative(func, pos_x[n])
+        dfdx[n] = first_derivative(track, pos_x[n])
+        d2fdx2[n] = second_derivative(track, pos_x[n])
 
 
 
     ans = input("Do you want to write simulation results to file? (y/N) ").lower()
-    if ans.startswith("y"):
+    if ans == "y":
         # write simulation to file
         write_csv(time_, angle, pos_x, pos_y, speed_tangential, accel_tangential,\
-                normal, curvature, dfdx, d2fdx2, filename="krumbane1_sim",
+                normal, curvature, dfdx, d2fdx2, filename=filename + "_sim",
                 header=["time","angle","x","y","speed_tangential",\
                 "accel_tangential","normal_force","curvature","dfdx","d2fdx2"])
 
     # plotting
     print("Plotting...")
-    fig = plt.figure("krumbane1")
+    fig = plt.figure(filename)
     plt.title("Simulation results")
     plt.xlabel("Time step")
     plt.grid()
