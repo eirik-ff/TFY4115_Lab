@@ -99,6 +99,9 @@ def main():
     root = tk.Tk()
     root.withdraw()
     filepath = filedialog.askopenfilename()
+    if filepath == "":
+        print("No file chosen, exiting...")
+        return
     filename = os.path.basename(filepath).split(".")[0]
     root.destroy()  # removes window instance
 
