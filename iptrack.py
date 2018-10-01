@@ -26,17 +26,29 @@ def iptrack(filename):
     return np.polyfit(data[:,1],data[:,2],15)
 
 
-def main():
-    data = "krumbane1.txt"
-    coeffs = iptrack(data)
+def print_expr(coeffs, var="x", py=False):
+    """
+    coeffs: list of coeffs from iptrack function
+    var: variable in expression
+    py: python friendly with * and **
+    """
+    term = "+ {0} {1}^{2} "
+    if py:
+        term = "+ {0}*{1}**{2} "
 
     # generates the polynomial expression
     poly = ""
     for n, c in enumerate(coeffs):
-        poly += "+ {} x^{} ".format(c, 15 - n)
+        poly += term.format(c, var, 15 - n)
 
     # prints the polynomial excluding the first + sign
     print(poly[1:])
+
+
+def main():
+    data = "krumbane1.txt"
+    coeffs = iptrack(data)
+    print_expr(coeffs, py=True)    
 
 
 if __name__ == '__main__':
