@@ -1,7 +1,8 @@
 import os
 import math
 import numpy as np
-from matplotlib import pyplot as plt
+import matplotlib
+import matplotlib.pyplot as plt
 from iptrack import *
 
 import tkinter as tk
@@ -111,7 +112,15 @@ def main():
     step_h = 0.001  # s, eulers method step
     UPPER_T = 1.1  # s, how long to simulate
 
+    # find upper time limit
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+        last = lines[-1]
+        t, x, y = last.split()
+        UPPER_T = float(t)
+
     time_ = [i for i in range(0, int(UPPER_T / step_h))]
+    time_plot = [i*step_h for i in time_]  # x values in seconds
 
     angle = [0.0] * len(time_)
     pos_x = [0.0] * len(time_)
@@ -160,15 +169,15 @@ def main():
     print("Plotting...")
     fig = plt.figure(filename)
     plt.title("Simulation results")
-    plt.xlabel("Time step")
+    plt.xlabel("Tid $t$ [s]")
     plt.grid()
 
-    plt.plot(time_, accel_tangential, "g")
-    plt.plot(time_, curvature, "y")
-    plt.plot(time_, speed_tangential, "b")
-    plt.plot(time_, pos_x, "c")
-    plt.plot(time_, pos_y, "m")
-    plt.plot(time_, normal, "k--")
+    plt.plot(time_plot, accel_tangential, "g")
+    plt.plot(time_plot, curvature, "y")
+    plt.plot(time_plot, speed_tangential, "b")
+    plt.plot(time_plot, pos_x, "c")
+    plt.plot(time_plot, pos_y, "m")
+    plt.plot(time_plot, normal, "k--")
     # plt.plot(time_, dfdx, "m")
     # plt.plot(time_, d2fdx2, "c")
 
@@ -188,8 +197,8 @@ def main():
             )
     plt.legend(legends, loc="best")
 
+    plt.savefig("test.svg", format="svg")
     plt.show()
-
 
 
 if __name__ == '__main__':
