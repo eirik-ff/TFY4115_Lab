@@ -95,19 +95,47 @@ def write_csv(*args, filename, header, ext="csv"):
     print("Wrote to", filepath)
 
 
+def plot_g_kraft_og_bane_vs_x(pos_x, pos_y, normal, fig):
+    ax1 = fig.add_subplot(111)
+    plt.xlabel("x-posisjon $x$ [m]")
+    plt.grid()
+
+    color = "r"
+    ax1.set_ylabel("G-krefter $n_{gf}$ [1]", color=color)
+    ax1.plot(pos_x, normal, color + "-")
+
+    ax2 = ax1.twinx()
+    color = "g"
+    ax2.set_ylabel("y-posisjon $y$ [m]", color=color)
+    ax2.plot(pos_x, pos_y, color + "-.")
+
+    fig.tight_layout()
+
+
 def main():
     print("Enter file with data from Tracker")
-    root = tk.Tk()
-    root.withdraw()
-    filepath = filedialog.askopenfilename()
-    if filepath == "":
-        print("No file chosen, exiting...")
-        return
+    # root = tk.Tk()
+    # root.withdraw()
+    # filepath = filedialog.askopenfilename()
+    # if filepath == "":
+    #     print("No file chosen, exiting...")
+    #     return
+    # root.destroy()  # removes window instance
+    filepath = r"C:/Users/eirik/googledrive/1_Skole/1_Universitetet/_3_Semester/TFY4115_Fysikk/Lab/Programfiler/test2.txt"
     filename = os.path.basename(filepath).split(".")[0]
-    root.destroy()  # removes window instance
 
-    coeffs = iptrack(filepath)
+    data = np.loadtxt(filepath, skiprows=2)  # t x y v
+    coeffs = iptrack_data(data)
     track = lambda x: bane(x, coeffs)  # banen
+
+    # finne bunnpunktet
+    y_data = data[:,2]
+    y_min = np.argmin(y_data)
+
+    # eksperimentell data 
+    curvature_exp = krumning(track, data[:,1])
+    speed_exp = data[:,3]
+    normal_g_force_exp = 1 + speed_exp**2 * curvature_exp / g
 
     step_h = 0.001  # s, eulers method step
     UPPER_T = 1.1  # s, how long to simulate
@@ -116,7 +144,7 @@ def main():
     with open(filepath, "r") as f:
         lines = f.readlines()
         last = lines[-1]
-        t, x, y = last.split()
+        t, x, y, v = last.split()
         UPPER_T = float(t)
 
     time_ = [i for i in range(0, int(UPPER_T / step_h))]
@@ -132,8 +160,10 @@ def main():
     dfdx = [0.0] * len(time_)  # first derivative
     d2fdx2 = [0.0] * len(time_)  # second derivative
 
+    pos_x[0] = data[:,1][0]
     angle[0] = alpha(track, pos_x[0])
     pos_y[0] = track(pos_x[0])
+    speed_tangential[0] = data[:,3][0]
 
     # calc points for curve
     t = [i * step_h for i in range(0, int(UPPER_T / step_h))]
@@ -143,6 +173,7 @@ def main():
 
     # simulation loop
     for n in time_[:-1]:  # n from 0 to len-1
+        # simulering 
         angle[n+1] = alpha(track, pos_x[n])
         accel_tangential[n+1] = accel_at_x(angle[n])
         speed_tangential[n+1] = speed_tangential[n] + step_h * accel_tangential[n]
@@ -157,7 +188,8 @@ def main():
 
 
 
-    ans = input("Do you want to write simulation results to file? (y/N) ").lower()
+    # ans = input("Do you want to write simulation results to file? (y/N) ").lower()
+    ans = "n"
     if ans == "y":
         # write simulation to file
         write_csv(time_, angle, pos_x, pos_y, speed_tangential, accel_tangential,\
@@ -167,37 +199,38 @@ def main():
 
     # plotting
     print("Plotting...")
-    fig = plt.figure(filename)
-    plt.title("Simulation results")
-    plt.xlabel("Tid $t$ [s]")
-    plt.grid()
+    fig = plt.figure(filename, figsize=(6,4), dpi=180)
+    # plot_g_kraft_og_bane_vs_x(pos_x, pos_y, normal, fig)
+    # plot_g_kraft_og_bane_vs_x(pos_x, pos_y, normal, fig)
 
-    plt.plot(time_plot, accel_tangential, "g")
-    plt.plot(time_plot, curvature, "y")
-    plt.plot(time_plot, speed_tangential, "b")
-    plt.plot(time_plot, pos_x, "c")
-    plt.plot(time_plot, pos_y, "m")
-    plt.plot(time_plot, normal, "k--")
-    # plt.plot(time_, dfdx, "m")
-    # plt.plot(time_, d2fdx2, "c")
+    # plt.plot(data[:,1], normal_g_force_exp)
+    # plt.axvline(x=data[y_min][1], color="k", linewidth=0.7)
+    plt.plot(data[:,0], data[:,3])
+    plt.plot(time_plot, speed_tangential)
+
+    print("G-kraft i bunnpunkt:", normal_g_force_exp[y_min], normal[10 * y_min])
+    print(normal[10*y_min - 10:10*y_min + 11])
 
     # plt.plot(pos_x, pos_y, 'r--')
     # plt.plot(t, b)  # bane plot
 
     legends = (
-                "Accel", 
-                "Curvature",
-                "Speed", 
-                "X", 
-                "Y", 
+                # "Accel", 
+                # "Curvature",
+                # "Speed", 
+                # "X", 
+                # "Y", 
                 "Normal G-force",
                 # "df/dx",
                 # "d^2f/dx^2",
                 ""
             )
-    plt.legend(legends, loc="best")
+    # plt.legend(legends, loc="best")
 
-    plt.savefig("test.svg", format="svg")
+    # ans = input("Save svg figure? (y/N) ").lower()
+    ans = "y"
+    if ans == "y":
+        plt.savefig(filename + ".svg", format="svg")
     plt.show()
 
 

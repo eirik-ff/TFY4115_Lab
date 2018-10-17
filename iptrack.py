@@ -19,10 +19,15 @@
 # descending powers.
 
 import numpy as np
+import sys
 
 # returns the coefficients of a polynomial of degree 15
 def iptrack(filename):
     data=np.loadtxt(filename,skiprows=2)
+    return np.polyfit(data[:,1],data[:,2],15)
+
+
+def iptrack_data(data):
     return np.polyfit(data[:,1],data[:,2],15)
 
 
@@ -46,7 +51,7 @@ def print_expr(coeffs, var="x", py=False):
 
 
 def main():
-    data = "krumbane1.txt"
+    data = "test2.txt"
     coeffs = iptrack(data)
     print_expr(coeffs, py=True)    
 
