@@ -31,6 +31,9 @@ def second_derivative(f, x, h=0.001):
 
 
 def alpha(f, x):
+    """
+    in radians
+    """
     return math.atan(-1*(first_derivative(f, x)))
 
 

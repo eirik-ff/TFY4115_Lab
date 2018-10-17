@@ -2,7 +2,7 @@ import numpy as np
 import iptrack
 import math
 import os
-from simulering import krumning, normal_g_force, bane
+from simulering import krumning, normal_g_force, bane, alpha
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -42,6 +42,8 @@ def main():
     # finne std avvik og gjennomsnitt
 
     g_force_at_min_array = []
+    curvature_at_min_array = []
+    alpha_at_min_array = []
 
     data_path = r"C:/Users/eirik/googledrive/1_Skole/1_Universitetet/_3_Semester/TFY4115_Fysikk/Lab/Dag-3/data/"
 
@@ -54,20 +56,33 @@ def main():
         # finne bunnpunkt
         y_data = data[:,2]
         y_min = np.argmin(y_data)
+        x_min = data[:,1][y_min]
 
         curvature_exp = krumning(track, data[:,1])
         speed_exp = data[:,3]
         normal_g_force_exp = 1 + speed_exp**2 * curvature_exp / g
 
         g_force_at_min_array.append(normal_g_force_exp[y_min])
+        curvature_at_min_array.append(1 / curvature_exp[y_min])
+        alpha_at_min_array.append(alpha(track, x_min) * 180 / 3.1415926)
 
 
     s = np.sqrt(data[:,1]**2 + data[:,2]**2)
 
-    print(g_force_at_min_array)
+    print("g_force_at_min_array")
     print("Avg:", average(g_force_at_min_array))
     print("Std.avvik:", standard_deviation(g_force_at_min_array))
     print("Std.feil:", standard_error(g_force_at_min_array))
+
+    print("\ncurvature_at_min_array")
+    print("Avg:", average(curvature_at_min_array))
+    print("Std.avvik:", standard_deviation(curvature_at_min_array))
+    print("Std.feil:", standard_error(curvature_at_min_array))
+
+    print("\nalpha_at_min_array")
+    print("Avg:", average(alpha_at_min_array))
+    print("Std.avvik:", standard_deviation(alpha_at_min_array))
+    print("Std.feil:", standard_error(alpha_at_min_array))
 
     fig = plt.figure()
     plt.plot(data[:,1], data[:,2])
