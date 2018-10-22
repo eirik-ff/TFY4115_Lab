@@ -2,7 +2,7 @@ import numpy as np
 import iptrack
 import math
 import os
-from simulering import krumning, normal_g_force, bane, alpha
+from simulering import krumning, normal_g_force, bane, alpha, accel_at_x, x_comp
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -57,6 +57,7 @@ def main():
     curvature_at_min_array = []
     alpha_at_min_array = []
     speed_at_min_array = []
+    g_force_at_min_sim_array = []
 
     data_path = r"C:/Users/eirik/googledrive/1_Skole/1_Universitetet/_3_Semester/TFY4115_Fysikk/Lab/Dag-3/data/"
 
@@ -66,10 +67,47 @@ def main():
         coeffs = iptrack.iptrack_data(data)
         track = lambda x: bane(x, coeffs)  # banen
 
+        ## simulering
+        step_h = 0.001  # s, eulers method step
+        LOWER_T = 0
+        UPPER_T = 1.1  # s, how long to simulate
+
+        # find upper time limit
+        with open(filepath, "r") as q:
+            lines = q.readlines()
+            first = lines[2]
+            last = lines[-1]
+            t, x, y, v = last.split()
+            UPPER_T = float(t)
+            t, x, y, v = first.split()
+            LOWER_T = float(t)
+
+        time_ = [i for i in range(int(LOWER_T / step_h), int(UPPER_T / step_h))]
+
+        angle = [0.0] * len(time_)
+        pos_x = [0.0] * len(time_)
+        speed_tangential = [0.0] * len(time_)
+        accel_tangential = [0.0] * len(time_)
+        normal = [0.0] * len(time_)
+
+        # set initial values
+        pos_x[0] = data[:,1][0]
+        angle[0] = alpha(track, pos_x[0])
+        speed_tangential[0] = data[:,3][0]
+
+        for n in range(len(time_) - 1):
+            angle[n+1] = alpha(track, pos_x[n])
+            accel_tangential[n+1] = accel_at_x(angle[n])
+            speed_tangential[n+1] = speed_tangential[n] + step_h * accel_tangential[n]
+            pos_x[n+1] = pos_x[n] + step_h * x_comp(speed_tangential[n], angle[n])
+
+            normal[n+1] = normal_g_force(speed_tangential[n], krumning(track, pos_x[n]), angle[n])
+
         # finne bunnpunkt
         y_data = data[:,2]
         y_min_index = np.argmin(y_data)
         x_min_val = data[:,1][y_min_index]
+        t_min_val = data[:,0][y_min_index]
 
         curvature_exp = krumning(track, data[:,1])
         speed_exp = data[:,3]
@@ -79,12 +117,18 @@ def main():
         curvature_at_min_array.append(1 / curvature_exp[y_min_index])
         alpha_at_min_array.append(alpha(track, x_min_val) * 180 / 3.1415926)
         speed_at_min_array.append(data[:,3][y_min_index])
+        g_force_at_min_sim_array.append(normal[int(t_min_val / step_h)])
 
 
-    print("G-kraft i bunn [1]")
+    print("G-kraft i bunn (eksp.) [1]")
     print("Avg:", average(g_force_at_min_array))
     print("Std.avvik:", standard_deviation(g_force_at_min_array))
     print("Std.feil:", standard_error(g_force_at_min_array))
+
+    print("\nG-kraft i bunn (simulert) [1]")
+    print("Avg:", average(g_force_at_min_sim_array))
+    print("Std.avvik:", standard_deviation(g_force_at_min_sim_array))
+    print("Std.feil:", standard_error(g_force_at_min_sim_array))
 
     print("\nKrumningsradius i bunn [m]")
     print("Avg:", average(curvature_at_min_array))
@@ -100,17 +144,6 @@ def main():
     print("Avg:", average(speed_at_min_array))
     print("Std.avvik:", standard_deviation(speed_at_min_array))
     print("Std.feil:", standard_error(speed_at_min_array))
-
-    fig = plt.figure()
-    plt.plot(data[:,0], data[:,3])
-    for t in [0.01, 0.05, 0.1, 0.2, 0.5]:
-        plt.plot(data[:,0][1:], lpf(np.diff(data[:,3])/np.diff(data[:,0]), (data[:,0][1] - data[:,0][0])/t))
-    # plt.plot(data[:,0][1:], np.diff(data[:,3])/np.diff(data[:,0]))
-    # plt.plot(data)
-    # plt.plot(data[:,1], curvature_exp)
-    legends = tuple(str(i) for i in [0.01, 0.05, 0.1, 0.2, 0.5])
-    plt.legend(("fart",) + legends, loc="best")
-    plt.show()
 
 
 if __name__ == '__main__':
