@@ -11,7 +11,7 @@ from tkinter import filedialog
 ## CONSTANTS
 g = 9.81  # m/s
 c = 2/5  # for solid sphere, I_0 / mr^2
-
+m = 0.0303  # kg
 
 
 ## FUNCTIONS
@@ -34,7 +34,7 @@ def alpha(f, x):
     """
     in radians
     """
-    return math.atan(-1*(first_derivative(f, x)))
+    return np.arctan(-1*(first_derivative(f, x)))
 
 
 def accel_at_x(angle):
@@ -42,17 +42,17 @@ def accel_at_x(angle):
     function to be used in eulers method
     """
     denom = 1 + c
-    numer = g * math.sin(angle)
+    numer = g * np.sin(angle)
 
     return numer / denom
 
 
 def x_comp(val, rads):
-    return val * math.cos(rads)
+    return val * np.cos(rads)
 
 
 def y_comp(val, rads):
-    return val * math.sin(rads)
+    return val * np.sin(rads)
 
 
 def krumning(f, x):
@@ -60,8 +60,17 @@ def krumning(f, x):
     return abs(second_derivative(f, x)) / (denom**(3/2))
 
 
-def normal_g_force(v_tangential, krumning):
-    return 1 + v_tangential**2 * krumning / g
+def normal_g_force(v_tangential, krumning, angle):
+    return np.cos(angle) + v_tangential**2 * krumning / g
+
+
+def friction(alpha, m, a):
+    """
+    alpha: vinkel (rad)
+    m: masse
+    a: akselerasjon
+    """
+    return m * (g * np.sin(alpha) - a)
 
 
 def bane(x, coeffs):
@@ -98,23 +107,6 @@ def write_csv(*args, filename, header, ext="csv"):
     print("Wrote to", filepath)
 
 
-def plot_g_kraft_og_bane_vs_x(pos_x, pos_y, normal, fig):
-    ax1 = fig.add_subplot(111)
-    plt.xlabel("x-posisjon $x$ [m]")
-    plt.grid()
-
-    color = "r"
-    ax1.set_ylabel("G-krefter $n_{gf}$ [1]", color=color)
-    ax1.plot(pos_x, normal, color + "-")
-
-    ax2 = ax1.twinx()
-    color = "g"
-    ax2.set_ylabel("y-posisjon $y$ [m]", color=color)
-    ax2.plot(pos_x, pos_y, color + "-.")
-
-    fig.tight_layout()
-
-
 def main():
     print("Enter file with data from Tracker")
     # root = tk.Tk()
@@ -124,7 +116,7 @@ def main():
     #     print("No file chosen, exiting...")
     #     return
     # root.destroy()  # removes window instance
-    filepath = r"C:/Users/eirik/googledrive/1_Skole/1_Universitetet/_3_Semester/TFY4115_Fysikk/Lab/Programfiler/test2.txt"
+    filepath = r"./data/fart1.txt"
     filename = os.path.basename(filepath).split(".")[0]
 
     data = np.loadtxt(filepath, skiprows=2)  # t x y v
@@ -138,19 +130,25 @@ def main():
     # eksperimentell data 
     curvature_exp = krumning(track, data[:,1])
     speed_exp = data[:,3]
-    normal_g_force_exp = 1 + speed_exp**2 * curvature_exp / g
+    angles_exp = alpha(track, data[:,1])
+    # normal_g_force_exp = 1 + speed_exp**2 * curvature_exp / g
+    normal_g_force_exp = normal_g_force(speed_exp, curvature_exp, angles_exp)
 
     step_h = 0.001  # s, eulers method step
+    LOWER_T = 0
     UPPER_T = 1.1  # s, how long to simulate
 
     # find upper time limit
     with open(filepath, "r") as f:
         lines = f.readlines()
+        first = lines[2]
         last = lines[-1]
         t, x, y, v = last.split()
         UPPER_T = float(t)
+        t, x, y, v = first.split()
+        LOWER_T = float(t)
 
-    time_ = [i for i in range(0, int(UPPER_T / step_h))]
+    time_ = [i for i in range(int(LOWER_T / step_h), int(UPPER_T / step_h))]
     time_plot = [i*step_h for i in time_]  # x values in seconds
 
     angle = [0.0] * len(time_)
@@ -160,6 +158,7 @@ def main():
     accel_tangential = [0.0] * len(time_)
     normal = [0.0] * len(time_)
     curvature = [0.0] * len(time_)
+    friction_sim = [0.0] * len(time_)
     dfdx = [0.0] * len(time_)  # first derivative
     d2fdx2 = [0.0] * len(time_)  # second derivative
 
@@ -168,14 +167,9 @@ def main():
     pos_y[0] = track(pos_x[0])
     speed_tangential[0] = data[:,3][0]
 
-    # calc points for curve
-    t = [i * step_h for i in range(0, int(UPPER_T / step_h))]
-    b = list()
-    for x in t:
-        b.append(track(x))
-
     # simulation loop
-    for n in time_[:-1]:  # n from 0 to len-1
+    # for n in time_[:-1]:  # n from 0 to len-1
+    for n in range(len(time_) - 1):
         # simulering 
         angle[n+1] = alpha(track, pos_x[n])
         accel_tangential[n+1] = accel_at_x(angle[n])
@@ -184,7 +178,8 @@ def main():
         pos_y[n+1] = pos_y[n] - step_h * y_comp(speed_tangential[n], angle[n])
 
         curvature[n+1] = krumning(track, pos_x[n])
-        normal[n+1] = normal_g_force(speed_tangential[n], krumning(track, pos_x[n]))
+        normal[n+1] = normal_g_force(speed_tangential[n], krumning(track, pos_x[n]), angle[n])
+        friction_sim[n+1] = m * (g * np.sin(angle[n+1]) + accel_tangential[n+1])
 
         dfdx[n] = first_derivative(track, pos_x[n])
         d2fdx2[n] = second_derivative(track, pos_x[n])
@@ -203,32 +198,92 @@ def main():
     # plotting
     print("Plotting...")
     fig = plt.figure(filename, figsize=(6,4), dpi=180)
-    # plot_g_kraft_og_bane_vs_x(pos_x, pos_y, normal, fig)
-    # plot_g_kraft_og_bane_vs_x(pos_x, pos_y, normal, fig)
+    plt.grid()
 
-    # plt.plot(data[:,1], normal_g_force_exp)
-    # plt.axvline(x=data[y_min][1], color="k", linewidth=0.7)
-    plt.plot(data[:,0], data[:,3])
-    plt.plot(time_plot, speed_tangential)
 
-    print("G-kraft i bunnpunkt:", normal_g_force_exp[y_min], normal[10 * y_min])
-    print(normal[10*y_min - 10:10*y_min + 11])
+    # graf som sammenlikner normalkraft simulert vs faktisk
+    ax1 = fig.add_subplot(111)
+    plt.xlabel("$x$-posisjon [m]")
 
-    # plt.plot(pos_x, pos_y, 'r--')
-    # plt.plot(t, b)  # bane plot
+    color = "r"
+    ax1.set_ylabel("G-krefter $n_{g}$ [1]")
+    l1, = ax1.plot(pos_x, normal, color + "-")
+    l3, = ax1.plot(data[:,1], normal_g_force_exp)  # eksperimentell data
+    ax1.set_ylim(0, 3.1)
 
+    ax2 = ax1.twinx()
+    color = "g"
+    ax2.set_ylabel("$y$-posisjon [m]", color=color)
+    ax2.set_ylim(0, 1.0323)
+    l2, = ax2.plot(pos_x, pos_y, color + "-.")
+    l4  = plt.axvline(x=data[y_min][1], color="k", linewidth=0.7)
     legends = (
-                # "Accel", 
-                # "Curvature",
-                # "Speed", 
-                # "X", 
-                # "Y", 
-                "Normal G-force",
-                # "df/dx",
-                # "d^2f/dx^2",
-                ""
+                "Simulering",
+                "Bane",
+                "Eksp. data",
+                "Bunnpunkt"
             )
+    plt.legend([l1, l2, l3, l4], legends, loc="upper left")
+    fig.tight_layout()
+
+    #################################################################
+
+    # # graf som sammenlikner simuleringen og eksperimentell data
+    # plt.xlabel("Tid [s]")
+    # plt.ylabel("$y$-posisjon [m]")
+    # plt.plot(data[:,0], data[:,2])
+    # plt.plot(time_plot, pos_y, "r")
+    # legends = (
+    #             "Eksp. data",
+    #             "Simulering"
+    #         )
     # plt.legend(legends, loc="best")
+
+    #################################################################
+
+    # plt.xlabel("Tid [s]")
+    # # graf som viser friksjonskraften og y-posisjonen
+    # ax1 = fig.add_subplot(111)
+    # color = "b"
+    # ax1.set_ylabel("Friksjons- og normalkraft [N]")
+    # l1, = ax1.plot(time_plot, friction_sim, color + "-")
+    # color = "r"
+    # l5, = ax1.plot(time_plot, [i*m for i in normal], color + "-")
+
+    # ax2 = ax1.twinx()
+    # color = "g"
+    # ax2.set_ylabel("$y$-posisjon [m]", color=color)
+    # l2, = ax2.plot(time_plot, pos_y, color + "-.")
+
+    # fig.tight_layout()
+    # l3 = plt.axvline(x=time_plot[pos_y.index(min(pos_y))], color="k", linewidth=0.7)
+
+    # plt.legend([l1, l5, l2, l3], ["Friksjonskraft", "Normalkraft", "y-posisjon", "Bunnpunkt"], loc="lower left")
+
+    ###############################################################
+
+    # # graf til martin, krumning og g-kraft
+    # plt.xlabel("$x$-posisjon [m]")
+    # upper_bound = 920
+    # a, b = -0.2, 3.2
+    # ax1 = fig.add_subplot(111)
+    # color = "r"
+    # ax1.set_ylabel("Krumning [1/m]", color=color)
+    # ax1.set_ylim(a, b)
+    # l1, = ax1.plot(pos_x[:upper_bound], curvature[:upper_bound], color + "-")
+
+    # ax2 = ax1.twinx()
+    # color = "b"
+    # ax2.set_ylabel("G-kraft [1]", color=color)
+    # ax2.set_ylim(a, b)
+    # l2, = ax2.plot(pos_x[:upper_bound], normal[:upper_bound], color + "-")
+
+    # fig.tight_layout()
+    # l3 = plt.axvline(x=pos_x[pos_y.index(min(pos_y))], color="k", linewidth=0.7)
+
+    # plt.legend([l1, l2, l3], ["Krumning", "G-kraft", "Bunnpunkt"], loc="lower center")
+
+    ##############################################################
 
     # ans = input("Save svg figure? (y/N) ").lower()
     ans = "y"
