@@ -54,10 +54,15 @@ def main():
     # finne std avvik og gjennomsnitt
 
     g_force_at_min_array = []
+    g_force_at_max_array = []
     curvature_at_min_array = []
+    curvature_at_max_array = []
     alpha_at_min_array = []
+    alpha_at_max_array = []
     speed_at_min_array = []
+    speed_at_max_array = []
     g_force_at_min_sim_array = []
+    g_force_at_max_sim_array = []
 
     data_path = r"C:/Users/eirik/googledrive/1_Skole/1_Universitetet/_3_Semester/TFY4115_Fysikk/Lab/Dag-3/data/"
 
@@ -83,6 +88,7 @@ def main():
             LOWER_T = float(t)
 
         time_ = [i for i in range(int(LOWER_T / step_h), int(UPPER_T / step_h))]
+        time_plot = [i*step_h for i in time_]  # x values in seconds
 
         angle = [0.0] * len(time_)
         pos_x = [0.0] * len(time_)
@@ -111,13 +117,24 @@ def main():
 
         curvature_exp = krumning(track, data[:,1])
         speed_exp = data[:,3]
-        normal_g_force_exp = 1 + speed_exp**2 * curvature_exp / g
+        # normal_g_force_exp = 1 + speed_exp**2 * curvature_exp / g
+        angles_exp = alpha(track, data[:,1])
+        normal_g_force_exp = normal_g_force(speed_exp, curvature_exp, angles_exp)
+
+        y_max_index = np.argmax(normal_g_force_exp)
+        x_max_val = data[:,1][y_max_index]
+        t_max_val = data[:,0][y_max_index]
 
         g_force_at_min_array.append(normal_g_force_exp[y_min_index])
+        g_force_at_max_array.append(normal_g_force_exp[y_max_index])
         curvature_at_min_array.append(1 / curvature_exp[y_min_index])
+        curvature_at_max_array.append(1 / curvature_exp[y_max_index])
         alpha_at_min_array.append(alpha(track, x_min_val) * 180 / 3.1415926)
+        alpha_at_max_array.append(alpha(track, x_max_val) * 180 / 3.1415926)
         speed_at_min_array.append(data[:,3][y_min_index])
+        speed_at_max_array.append(data[:,3][y_max_index])
         g_force_at_min_sim_array.append(normal[int(t_min_val / step_h)])
+        g_force_at_max_sim_array.append(normal[int(t_max_val / step_h)])
 
 
     print("G-kraft i bunn (eksp.) [1]")
@@ -125,25 +142,55 @@ def main():
     print("Std.avvik:", standard_deviation(g_force_at_min_array))
     print("Std.feil:", standard_error(g_force_at_min_array))
 
-    print("\nG-kraft i bunn (simulert) [1]")
+    print("\nG-kraft i bunn (sim) [1]")
     print("Avg:", average(g_force_at_min_sim_array))
     print("Std.avvik:", standard_deviation(g_force_at_min_sim_array))
     print("Std.feil:", standard_error(g_force_at_min_sim_array))
 
-    print("\nKrumningsradius i bunn [m]")
+
+    print("\n\nG-kraft i maksimal (eksp) [1]")
+    print("Avg:", average(g_force_at_max_array))
+    print("Std.avvik:", standard_deviation(g_force_at_max_array))
+    print("Std.feil:", standard_error(g_force_at_max_array))
+
+    print("\nG-kraft i maksimal (sim) [1]")
+    print("Avg:", average(g_force_at_max_sim_array))
+    print("Std.avvik:", standard_deviation(g_force_at_max_sim_array))
+    print("Std.feil:", standard_error(g_force_at_max_sim_array))
+
+
+    print("\n\nKrumningsradius i bunn [m]")
     print("Avg:", average(curvature_at_min_array))
     print("Std.avvik:", standard_deviation(curvature_at_min_array))
     print("Std.feil:", standard_error(curvature_at_min_array))
 
-    print("\nVinkel i bunn [*]")
+    print("\nKrumningsradius i maksimal [m]")
+    print("Avg:", average(curvature_at_max_array))
+    print("Std.avvik:", standard_deviation(curvature_at_max_array))
+    print("Std.feil:", standard_error(curvature_at_max_array))
+
+
+    print("\n\nVinkel i bunn []")
     print("Avg:", average(alpha_at_min_array))
     print("Std.avvik:", standard_deviation(alpha_at_min_array))
     print("Std.feil:", standard_error(alpha_at_min_array))
 
-    print("\nFart i bunn [m/s]")
+    print("\nVinkel i maksimal [*]")
+    print("Avg:", average(alpha_at_max_array))
+    print("Std.avvik:", standard_deviation(alpha_at_max_array))
+    print("Std.feil:", standard_error(alpha_at_max_array))
+
+
+    print("\n\nFart i bunn [m/s]")
     print("Avg:", average(speed_at_min_array))
     print("Std.avvik:", standard_deviation(speed_at_min_array))
     print("Std.feil:", standard_error(speed_at_min_array))
+
+    print("\nFart i maksimal [m/s]")
+    print("Avg:", average(speed_at_max_array))
+    print("Std.avvik:", standard_deviation(speed_at_max_array))
+    print("Std.feil:", standard_error(speed_at_max_array))
+
 
 
 if __name__ == '__main__':
